@@ -152,6 +152,7 @@ export async function deleteRestaurant(id: string) {
   await requireAdmin();
   await db.delete(restaurants).where(eq(restaurants.id, id));
   revalidatePath("/");
+  revalidatePath("/admin/matches");
 }
 
 export async function toggleHighPriority(id: string, next: boolean) {

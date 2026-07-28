@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { restaurantMatchCandidates, restaurants } from "@/db/schema";
-import { confirmMatch, rejectAllForSource, rejectMatch } from "./actions";
+import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
+import { deleteRestaurant } from "../../restaurants/actions";
+import { confirmMatch, rejectAllForSource, rejectMatch, updateAndResyncGoogle } from "./actions";
 
 type Source = "google" | "yelp";
 const SOURCES: Source[] = ["google", "yelp"];
@@ -10,9 +13,9 @@ const SOURCES: Source[] = ["google", "yelp"];
 export default async function MatchReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ source?: string }>;
+  searchParams: Promise<{ source?: string; edit?: string }>;
 }) {
-  const { source: sourceParam } = await searchParams;
+  const { source: sourceParam, edit: editingId } = await searchParams;
   const sourceFilter: Source | null = sourceParam === "google" || sourceParam === "yelp" ? sourceParam : null;
   const visibleSources = sourceFilter ? [sourceFilter] : SOURCES;
 
@@ -73,6 +76,20 @@ export default async function MatchReviewPage({
     await rejectAllForSource(restaurantId, source);
   }
 
+  // currentSource is bound in as a plain string (not the pageHref closure) since these
+  // are server actions — only serializable bound args should cross that boundary.
+  async function saveEdit(restaurantId: string, currentSource: Source | null, formData: FormData) {
+    "use server";
+    await updateAndResyncGoogle(restaurantId, formData);
+    redirect(currentSource ? `/admin/matches?source=${currentSource}` : "/admin/matches");
+  }
+
+  async function deleteEntry(restaurantId: string, currentSource: Source | null) {
+    "use server";
+    await deleteRestaurant(restaurantId);
+    redirect(currentSource ? `/admin/matches?source=${currentSource}` : "/admin/matches");
+  }
+
   return (
     <div>
       <h1 className="mb-4 text-2xl font-semibold">
@@ -109,9 +126,70 @@ export default async function MatchReviewPage({
       <div className="flex flex-col gap-6">
         {[...byRestaurant.entries()].map(([restaurantId, r]) => (
           <div key={restaurantId} className="rounded border p-4">
-            <h2 className="mb-3 font-semibold">
-              {r.name} <span className="font-normal text-gray-700">· {r.city}</span>
-            </h2>
+            {editingId === restaurantId ? (
+              <form
+                action={saveEdit.bind(null, restaurantId, sourceFilter)}
+                className="mb-3 flex flex-wrap items-end gap-2"
+              >
+                <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                  Name
+                  <input
+                    name="name"
+                    defaultValue={r.name}
+                    required
+                    className="rounded border px-2 py-1 text-sm"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+                  City
+                  <input
+                    name="city"
+                    defaultValue={r.city}
+                    required
+                    className="rounded border px-2 py-1 text-sm"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  className="rounded bg-brand-green px-2 py-1 text-sm text-brand-cream hover:bg-brand-green-dark"
+                >
+                  Save &amp; resync Google
+                </button>
+                <Link
+                  href={sourceFilter ? `/admin/matches?source=${sourceFilter}` : "/admin/matches"}
+                  className="rounded border px-2 py-1 text-sm"
+                >
+                  Cancel
+                </Link>
+              </form>
+            ) : (
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="font-semibold">
+                  {r.name} <span className="font-normal text-gray-700">· {r.city}</span>
+                </h2>
+                <div className="flex shrink-0 gap-1 text-xs">
+                  <Link
+                    href={
+                      sourceFilter
+                        ? `/admin/matches?source=${sourceFilter}&edit=${restaurantId}`
+                        : `/admin/matches?edit=${restaurantId}`
+                    }
+                    className="rounded border px-2 py-1"
+                  >
+                    Edit
+                  </Link>
+                  <form action={deleteEntry.bind(null, restaurantId, sourceFilter)}>
+                    <ConfirmSubmitButton
+                      title={`Delete ${r.name}?`}
+                      body={`This permanently deletes ${r.name} (${r.city}) and all of its notes, ratings, visits, and match candidates. This can't be undone.`}
+                      className="rounded border px-2 py-1 text-xs text-red-700"
+                    >
+                      Delete
+                    </ConfirmSubmitButton>
+                  </form>
+                </div>
+              </div>
+            )}
             <div
               className={`grid grid-cols-1 gap-4 ${visibleSources.length > 1 ? "sm:grid-cols-2" : ""}`}
             >

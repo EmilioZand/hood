@@ -6,6 +6,7 @@ import { averageRating } from "@/lib/data/ratings";
 import { addNote, deleteRestaurant, rateRestaurant, toggleHighPriority, toggleVisited } from "../actions";
 import { RestaurantMap } from "@/components/RestaurantMap";
 import { AverageRating } from "@/components/AverageRating";
+import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 
 const MICHELIN_LABELS: Record<string, string> = {
   selected: "Selected",
@@ -134,9 +135,13 @@ export default async function RestaurantDetailPage({
               Edit
             </Link>
             <form action={deleteAction}>
-              <button type="submit" className="rounded border px-2 py-1 text-red-700">
+              <ConfirmSubmitButton
+                title={`Delete ${restaurant.name}?`}
+                body={`This permanently deletes ${restaurant.name} (${restaurant.city}) and all of its notes, ratings, visits, and match candidates. This can't be undone.`}
+                className="rounded border px-2 py-1 text-red-700"
+              >
                 Delete
-              </button>
+              </ConfirmSubmitButton>
             </form>
           </div>
         )}

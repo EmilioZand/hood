@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { href: "/admin/matches", label: "Match review" },
   { href: "/admin/awards", label: "Award review" },
   { href: "/admin/invites", label: "Invites" },
+  { href: "/admin/users", label: "Users" },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
