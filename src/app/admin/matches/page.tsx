@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { restaurantMatchCandidates, restaurants } from "@/db/schema";
+import { restaurantLocations, restaurantMatchCandidates, restaurants } from "@/db/schema";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
-import { deleteRestaurant } from "../../restaurants/actions";
-import { confirmMatch, rejectAllForSource, rejectMatch, updateAndResyncGoogle } from "./actions";
+import { deleteRestaurant, markRestaurantClosedNoLocation, setLocationClosed } from "../../restaurants/actions";
+import {
+  confirmMatch,
+  regenerateGoogleMatches,
+  rejectAllForSource,
+  rejectMatch,
+  updateAndResyncGoogle,
+} from "./actions";
 
 type Source = "google" | "yelp";
 const SOURCES: Source[] = ["google", "yelp"];
@@ -47,7 +53,11 @@ export default async function MatchReviewPage({
     restaurantIdsBySource[row.source].add(row.restaurantId);
   }
 
-  const byRestaurant = new Map<string, { name: string; city: string; google: Row[]; yelp: Row[] }>();
+  type LocationSummary = { id: string; status: string };
+  const byRestaurant = new Map<
+    string,
+    { name: string; city: string; google: Row[]; yelp: Row[]; locations: LocationSummary[] }
+  >();
   for (const row of rows) {
     if (sourceFilter && row.source !== sourceFilter) continue;
     if (!byRestaurant.has(row.restaurantId)) {
@@ -56,10 +66,49 @@ export default async function MatchReviewPage({
         city: row.restaurantCity,
         google: [],
         yelp: [],
+        locations: [],
       });
     }
     byRestaurant.get(row.restaurantId)![row.source].push(row);
   }
+
+  // Spots with no confirmed location at all — Google/Yelp never found a match, or every
+  // candidate got rejected — otherwise fall through the cracks entirely once they have
+  // no pending candidates left to review. Left out of the Yelp-only filter since there's
+  // nothing actionable for them there (no "regenerate" for Yelp yet).
+  if (sourceFilter !== "yelp") {
+    const unmatched = await db
+      .select({ id: restaurants.id, name: restaurants.name, city: restaurants.city })
+      .from(restaurants)
+      .leftJoin(restaurantLocations, eq(restaurantLocations.restaurantId, restaurants.id))
+      .where(isNull(restaurantLocations.id));
+
+    for (const r of unmatched) {
+      if (!byRestaurant.has(r.id)) {
+        byRestaurant.set(r.id, { name: r.name, city: r.city, google: [], yelp: [], locations: [] });
+      }
+    }
+  }
+
+  // Fetched for the "Mark closed" toggle below — only shown when a restaurant has
+  // exactly one location, so there's no ambiguity about which one it applies to (a
+  // multi-location chain needs the restaurant detail page's per-location control).
+  if (byRestaurant.size > 0) {
+    const locations = await db
+      .select({
+        id: restaurantLocations.id,
+        restaurantId: restaurantLocations.restaurantId,
+        status: restaurantLocations.status,
+      })
+      .from(restaurantLocations)
+      .where(inArray(restaurantLocations.restaurantId, [...byRestaurant.keys()]));
+
+    for (const l of locations) {
+      byRestaurant.get(l.restaurantId)?.locations.push({ id: l.id, status: l.status });
+    }
+  }
+
+  const sortedRestaurants = [...byRestaurant.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
 
   async function confirm(candidateId: string) {
     "use server";
@@ -74,6 +123,21 @@ export default async function MatchReviewPage({
   async function noMatch(restaurantId: string, source: Source) {
     "use server";
     await rejectAllForSource(restaurantId, source);
+  }
+
+  async function regenerate(restaurantId: string) {
+    "use server";
+    await regenerateGoogleMatches(restaurantId);
+  }
+
+  async function toggleClosed(locationId: string, restaurantId: string, closed: boolean) {
+    "use server";
+    await setLocationClosed(locationId, restaurantId, closed);
+  }
+
+  async function markClosedNoLocation(restaurantId: string) {
+    "use server";
+    await markRestaurantClosedNoLocation(restaurantId);
   }
 
   // currentSource is bound in as a plain string (not the pageHref closure) since these
@@ -99,7 +163,9 @@ export default async function MatchReviewPage({
         Confirming a match creates or updates a location (address/coordinates from Google,
         ratings from Google + Yelp). Confirming more than one candidate for the same
         spot adds multiple locations — use this for chains (e.g. a spot with
-        several branches). Reject any candidate that isn&apos;t a real match.
+        several branches). Reject any candidate that isn&apos;t a real match. Spots with no
+        confirmed location at all are shown too, even once they run out of pending
+        candidates — regenerate a fresh Google search for those anytime.
       </p>
 
       <div className="mb-6 flex flex-wrap items-center gap-2 text-sm">
@@ -124,7 +190,7 @@ export default async function MatchReviewPage({
       </div>
 
       <div className="flex flex-col gap-6">
-        {[...byRestaurant.entries()].map(([restaurantId, r]) => (
+        {sortedRestaurants.map(([restaurantId, r]) => (
           <div key={restaurantId} className="rounded border p-4">
             {editingId === restaurantId ? (
               <form
@@ -178,6 +244,27 @@ export default async function MatchReviewPage({
                   >
                     Edit
                   </Link>
+                  {r.locations.length === 0 && (
+                    <form action={markClosedNoLocation.bind(null, restaurantId)}>
+                      <button type="submit" className="rounded border px-2 py-1 text-red-700">
+                        Mark closed
+                      </button>
+                    </form>
+                  )}
+                  {r.locations.length === 1 && (
+                    <form
+                      action={toggleClosed.bind(
+                        null,
+                        r.locations[0].id,
+                        restaurantId,
+                        r.locations[0].status !== "permanently_closed",
+                      )}
+                    >
+                      <button type="submit" className="rounded border px-2 py-1 text-red-700">
+                        {r.locations[0].status === "permanently_closed" ? "Reopen" : "Mark closed"}
+                      </button>
+                    </form>
+                  )}
                   <form action={deleteEntry.bind(null, restaurantId, sourceFilter)}>
                     <ConfirmSubmitButton
                       title={`Delete ${r.name}?`}
@@ -236,7 +323,19 @@ export default async function MatchReviewPage({
                       </li>
                     ))}
                     {r[source].length === 0 && (
-                      <li className="text-xs text-gray-600">No pending candidates.</li>
+                      <li className="flex items-center justify-between gap-2 text-xs text-gray-600">
+                        <span>No pending candidates.</span>
+                        {source === "google" && (
+                          <form action={regenerate.bind(null, restaurantId)}>
+                            <button
+                              type="submit"
+                              className="rounded border px-2 py-1 text-xs text-green-700"
+                            >
+                              Regenerate matches
+                            </button>
+                          </form>
+                        )}
+                      </li>
                     )}
                   </ul>
                 </div>

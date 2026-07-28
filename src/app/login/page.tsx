@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { signInWithGoogle, signInWithPassword } from "./actions";
 
 export default async function LoginPage({
@@ -12,7 +13,8 @@ export default async function LoginPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
-      <h1 className="text-2xl font-semibold">Sign in</h1>
+      <Image src="/icon.png" alt="Hood" width={100} height={100} className="mx-auto" />
+      <h1 className="text-center text-2xl font-semibold">Sign in</h1>
 
       {params.error && <p className="text-sm text-red-600">{params.error}</p>}
       {params.message && <p className="text-sm text-green-700">{params.message}</p>}

@@ -222,3 +222,60 @@ export async function closeSuppressClosure(locationId: string, restaurantId: str
   revalidatePath(`/restaurants/${restaurantId}`);
   revalidatePath("/");
 }
+
+/** Manually marks a location closed/reopened — the same `permanently_closed` status the
+ * sync-ratings cron sets from Google's business_status, just set by hand instead. Clears
+ * closureSuppressed either way, since that flag only makes sense layered on top of an
+ * actual closed status. */
+export async function setLocationClosed(locationId: string, restaurantId: string, closed: boolean) {
+  await requireAdmin();
+
+  if (!closed) {
+    // Reopening a placeholder row created by markRestaurantClosedNoLocation (no address,
+    // nothing else worth keeping) removes it entirely instead of leaving an empty "active"
+    // location behind — restoring the restaurant to its original zero-location state.
+    const [location] = await db
+      .select({ address: restaurantLocations.address })
+      .from(restaurantLocations)
+      .where(eq(restaurantLocations.id, locationId))
+      .limit(1);
+    if (location && location.address === null) {
+      await db.delete(restaurantLocations).where(eq(restaurantLocations.id, locationId));
+      revalidatePath(`/restaurants/${restaurantId}`);
+      revalidatePath("/");
+      revalidatePath("/admin/matches");
+      return;
+    }
+  }
+
+  await db
+    .update(restaurantLocations)
+    .set({
+      status: closed ? "permanently_closed" : "active",
+      closedDetectedAt: closed ? new Date() : null,
+      closureSuppressed: false,
+      updatedAt: new Date(),
+    })
+    .where(eq(restaurantLocations.id, locationId));
+  revalidatePath(`/restaurants/${restaurantId}`);
+  revalidatePath("/");
+  revalidatePath("/admin/matches");
+}
+
+/** Marks a location-less restaurant permanently closed by creating a minimal placeholder
+ * location (no address/coordinates — nothing was ever confirmed) carrying the same
+ * `permanently_closed` status as a real location. Once created, it's just a normal location
+ * to the rest of the app (shows up in the locations list, the "Reopen" toggle above, and
+ * match review's single-location toggle) — see setLocationClosed for how reopening it cleans
+ * back up. */
+export async function markRestaurantClosedNoLocation(restaurantId: string) {
+  await requireAdmin();
+  await db.insert(restaurantLocations).values({
+    restaurantId,
+    status: "permanently_closed",
+    closedDetectedAt: new Date(),
+  });
+  revalidatePath(`/restaurants/${restaurantId}`);
+  revalidatePath("/");
+  revalidatePath("/admin/matches");
+}

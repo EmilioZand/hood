@@ -3,7 +3,15 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/guards";
 import { getRestaurantById } from "@/lib/data/restaurants";
 import { averageRating } from "@/lib/data/ratings";
-import { addNote, deleteRestaurant, rateRestaurant, toggleHighPriority, toggleVisited } from "../actions";
+import {
+  addNote,
+  deleteRestaurant,
+  markRestaurantClosedNoLocation,
+  rateRestaurant,
+  setLocationClosed,
+  toggleHighPriority,
+  toggleVisited,
+} from "../actions";
 import { RestaurantMap } from "@/components/RestaurantMap";
 import { AverageRating } from "@/components/AverageRating";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
@@ -72,6 +80,16 @@ export default async function RestaurantDetailPage({
   async function rateAction(value: number) {
     "use server";
     await rateRestaurant(id, value);
+  }
+
+  async function toggleClosedAction(locationId: string, closed: boolean) {
+    "use server";
+    await setLocationClosed(locationId, id, closed);
+  }
+
+  async function markClosedNoLocationAction() {
+    "use server";
+    await markRestaurantClosedNoLocation(id);
   }
 
   const geolocatedLocations = restaurant.locations.filter(
@@ -152,18 +170,38 @@ export default async function RestaurantDetailPage({
           {restaurant.locations.length > 1 ? "Locations" : "Location"}
         </h2>
         {restaurant.locations.length === 0 ? (
-          <p className="text-sm text-gray-700">No confirmed location yet.</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-gray-700">No confirmed location yet.</p>
+            {user.isAdmin && (
+              <form action={markClosedNoLocationAction}>
+                <button type="submit" className="shrink-0 rounded border px-2 py-1 text-xs text-red-700">
+                  Mark closed
+                </button>
+              </form>
+            )}
+          </div>
         ) : (
           <ul className="flex flex-col gap-3">
             {restaurant.locations.map((l) => (
               <li key={l.id} className="rounded border px-3 py-2 text-sm">
-                {l.address && <p className="text-gray-700">{l.address}</p>}
+                <div className="flex items-start justify-between gap-2">
+                  {l.address && <p className="text-gray-700">{l.address}</p>}
+                  {user.isAdmin && (
+                    <form action={toggleClosedAction.bind(null, l.id, l.status !== "permanently_closed")}>
+                      <button
+                        type="submit"
+                        className="shrink-0 rounded border px-2 py-1 text-xs text-red-700"
+                      >
+                        {l.status === "permanently_closed" ? "Reopen" : "Mark closed"}
+                      </button>
+                    </form>
+                  )}
+                </div>
 
                 {l.status === "permanently_closed" && !l.closureSuppressed && (
                   <p className="mt-1 rounded bg-red-50 px-2 py-1 text-red-800">
-                    Google reports this location as permanently closed
-                    {l.closedDetectedAt && ` (detected ${l.closedDetectedAt.toLocaleDateString()})`}
-                    .
+                    Reported permanently closed
+                    {l.closedDetectedAt && ` (${l.closedDetectedAt.toLocaleDateString()})`}.
                   </p>
                 )}
 

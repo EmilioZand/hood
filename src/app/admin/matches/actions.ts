@@ -38,11 +38,35 @@ export async function rejectAllForSource(restaurantId: string, source: "google" 
 }
 
 /**
+ * Clears out old pending/rejected Google candidates for a restaurant (they were scored
+ * against whatever name/city was current at the time) and re-runs the Google search —
+ * shared by the "edit name/city" and plain "regenerate" flows below. Leaves any
+ * already-confirmed candidate alone, since that already created a real location
+ * independent of this candidate row. Best-effort: silently does nothing if Google
+ * Places isn't configured or the search fails, same as spot-creation's own lookup.
+ */
+async function resyncGoogleCandidates(restaurantId: string, name: string, city: string) {
+  if (!process.env.GOOGLE_PLACES_API_KEY) return;
+
+  try {
+    await db
+      .delete(restaurantMatchCandidates)
+      .where(
+        and(
+          eq(restaurantMatchCandidates.restaurantId, restaurantId),
+          eq(restaurantMatchCandidates.source, "google"),
+          inArray(restaurantMatchCandidates.status, ["pending", "rejected"]),
+        ),
+      );
+    await queueGoogleMatchCandidates(db, { id: restaurantId, name, city }, process.env.GOOGLE_PLACES_API_KEY);
+  } catch {
+    // Ignored — can be retried later from the review queue.
+  }
+}
+
+/**
  * Corrects a restaurant's name/city right from the review queue (a likely cause of a
- * bad match batch) and re-runs the Google search against the corrected values. Clears
- * out the old pending/rejected Google candidates first — they were scored against the
- * name/city that's now wrong — but leaves any already-confirmed candidate alone, since
- * that already created a real location independent of this candidate row.
+ * bad match batch) and re-runs the Google search against the corrected values.
  */
 export async function updateAndResyncGoogle(restaurantId: string, formData: FormData) {
   await requireAdmin();
@@ -56,24 +80,29 @@ export async function updateAndResyncGoogle(restaurantId: string, formData: Form
     .set({ name, city, updatedAt: new Date() })
     .where(eq(restaurants.id, restaurantId));
 
-  if (process.env.GOOGLE_PLACES_API_KEY) {
-    try {
-      await db
-        .delete(restaurantMatchCandidates)
-        .where(
-          and(
-            eq(restaurantMatchCandidates.restaurantId, restaurantId),
-            eq(restaurantMatchCandidates.source, "google"),
-            inArray(restaurantMatchCandidates.status, ["pending", "rejected"]),
-          ),
-        );
-      await queueGoogleMatchCandidates(db, { id: restaurantId, name, city }, process.env.GOOGLE_PLACES_API_KEY);
-    } catch {
-      // Ignored — the name/city update still applies; resync can be retried later.
-    }
-  }
+  await resyncGoogleCandidates(restaurantId, name, city);
 
   revalidatePath("/admin/matches");
   revalidatePath("/");
   revalidatePath(`/restaurants/${restaurantId}`);
+}
+
+/**
+ * Re-runs the Google search for a restaurant with no pending Google candidates left to
+ * review (name/city unchanged) — for a spot Google never matched, or where every
+ * candidate got rejected, without needing to go through the edit form first.
+ */
+export async function regenerateGoogleMatches(restaurantId: string) {
+  await requireAdmin();
+
+  const [restaurant] = await db
+    .select({ name: restaurants.name, city: restaurants.city })
+    .from(restaurants)
+    .where(eq(restaurants.id, restaurantId))
+    .limit(1);
+  if (!restaurant) return;
+
+  await resyncGoogleCandidates(restaurantId, restaurant.name, restaurant.city);
+
+  revalidatePath("/admin/matches");
 }
