@@ -1,0 +1,28 @@
+{
+  "id": "ChIJkTHW2l6Bj4AR9ayFQ-J4Kqw",
+  "formattedAddress": "1403 Webster St, Alameda, CA 94501, USA",
+  "location": {
+    "latitude": 37.7716751,
+    "longitude": -122.2770072
+  },
+  "rating": 4.6,
+  "businessStatus": "OPERATIONAL",
+  "userRatingCount": 129,
+  "displayName": {
+    "text": "Waki",
+    "languageCode": "en"
+  },
+  "regularOpeningHours": {
+    "openNow": false,
+    "periods": [
+      { "open": { "day": 0, "hour": 12, "minute": 0 }, "close": { "day": 0, "hour": 14, "minute": 30 } },
+      { "open": { "day": 0, "hour": 16, "minute": 0 }, "close": { "day": 0, "hour": 21, "minute": 0 } },
+      { "open": { "day": 1, "hour": 17, "minute": 0 }, "close": { "day": 1, "hour": 21, "minute": 0 } },
+      { "open": { "day": 2, "hour": 17, "minute": 0 }, "close": { "day": 2, "hour": 21, "minute": 0 } },
+      { "open": { "day": 3, "hour": 17, "minute": 0 }, "close": { "day": 3, "hour": 21, "minute": 0 } },
+      { "open": { "day": 4, "hour": 17, "minute": 0 }, "close": { "day": 4, "hour": 21, "minute": 0 } },
+      { "open": { "day": 5, "hour": 17, "minute": 0 }, "close": { "day": 5, "hour": 21, "minute": 0 } },
+      { "open": { "day": 6, "hour": 17, "minute": 0 }, "close": { "day": 6, "hour": 21, "minute": 0 } }
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+ALTER TABLE "award_scrape_candidates" DROP CONSTRAINT "award_scrape_candidates_source_scraped_url_unique";--> statement-breakpoint
+ALTER TABLE "award_scrape_candidates" ADD CONSTRAINT "award_scrape_candidates_source_scraped_url_scraped_award_text_unique" UNIQUE("source","scraped_url","scraped_award_text");

@@ -1,0 +1,1 @@
+ALTER TABLE "restaurants" ADD COLUMN "legacy_been_there" boolean DEFAULT false NOT NULL;

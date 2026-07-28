@@ -1,0 +1,83 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1785177148817,
+      "tag": "20260727183228_shallow_komodo",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785177457392,
+      "tag": "20260727183737_flowery_jackal",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785177523221,
+      "tag": "20260727183843_wide_next_avengers",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785181134771,
+      "tag": "20260727193854_breezy_ulik",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785182383176,
+      "tag": "20260727195943_rainy_stark_industries",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785183162125,
+      "tag": "20260727201242_sticky_the_anarchist",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785184124155,
+      "tag": "20260727202844_yielding_marvel_zombies",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785187519714,
+      "tag": "20260727212519_add_restaurant_locations",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785188581307,
+      "tag": "20260727214301_add_recommendation_visited_priority",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785196994495,
+      "tag": "20260728000314_add_invites_and_approval",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785199780966,
+      "tag": "20260728004940_add_restaurant_ratings",
+      "breakpoints": true
+    }
+  ]
+}

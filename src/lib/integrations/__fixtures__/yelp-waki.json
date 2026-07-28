@@ -1,0 +1,31 @@
+{
+  "id": "4JNswX9a6x9JBjo0w5Kyww",
+  "alias": "waki-japanese-cuisine-alameda",
+  "name": "WAKI Japanese Cuisine",
+  "image_url": "https://s3-media0.fl.yelpcdn.com/bphoto/FRkIAhlcMoP5ArSw3odwUw/o.jpg",
+  "is_closed": false,
+  "url": "https://www.yelp.com/biz/waki-japanese-cuisine-alameda",
+  "review_count": 260,
+  "categories": [
+    { "alias": "japanese", "title": "Japanese" },
+    { "alias": "sushi", "title": "Sushi Bars" },
+    { "alias": "seafood", "title": "Seafood" }
+  ],
+  "rating": 4.5,
+  "coordinates": {
+    "latitude": 37.771612,
+    "longitude": -122.277037
+  },
+  "location": {
+    "address1": "1403 Webster St",
+    "address2": "",
+    "address3": "",
+    "city": "Alameda",
+    "zip_code": "94501",
+    "country": "US",
+    "state": "CA",
+    "display_address": ["1403 Webster St", "Alameda, CA 94501"]
+  },
+  "phone": "+15102178396",
+  "display_phone": "(510) 217-8396"
+}

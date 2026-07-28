@@ -1,0 +1,2 @@
+ALTER TABLE "restaurant_recommendations" ADD COLUMN "is_high_priority" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "restaurant_recommendations" ADD COLUMN "already_visited" boolean DEFAULT false NOT NULL;

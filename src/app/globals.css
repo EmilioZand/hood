@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
+/* Committed to a light theme throughout — none of the UI has a dark variant, and
+   auto-switching to dark on prefers-color-scheme left native form control
+   backgrounds white while text color followed the dark palette, making input/select
+   text invisible (white on white) whenever the OS/browser preferred dark mode. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf6ec;
+  --foreground: #1e3d32;
+  color-scheme: light;
+}
+
+/* Hood brand palette, sampled from the logo: deep green, cream, and a mustard-gold
+   accent. Defined in @theme (not @theme inline) so Tailwind generates bg-brand-*,
+   text-brand-*, border-brand-* utilities usable throughout the app. */
+@theme {
+  --color-brand-green: #1e3d32;
+  --color-brand-green-dark: #142a22;
+  --color-brand-cream: #faf6ec;
+  --color-brand-gold: #d4a83a;
+  --color-brand-gold-dark: #b98d23;
 }
 
 @theme inline {
@@ -10,13 +26,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
