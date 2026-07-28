@@ -7,6 +7,7 @@ import { restaurantNotes, restaurantRecommendations, restaurants, restaurantVisi
 import { requireUser } from "@/lib/auth/guards";
 import { rankCandidates } from "@/lib/matching/fuzzyMatch";
 import { addCuisineTags } from "@/lib/data/cuisines";
+import { getOrCreateNeighborhoodId } from "@/lib/data/neighborhoods";
 
 const DUPLICATE_THRESHOLD = 0.5;
 
@@ -36,12 +37,15 @@ export async function submitRecommendation(formData: FormData) {
   const possibleDuplicateOf =
     bestMatch && bestMatch.matchScore >= DUPLICATE_THRESHOLD ? bestMatch.id : null;
 
+  const resolvedCity = city ?? "Unknown";
+  const neighborhoodId = await getOrCreateNeighborhoodId(db, resolvedCity, neighborhood);
+
   const [created] = await db
     .insert(restaurants)
     .values({
       name,
-      city: city ?? "Unknown",
-      neighborhood,
+      city: resolvedCity,
+      neighborhoodId,
       isHighPriority,
       priority: isHighPriority ? "high" : "none",
       createdBy: user.id,

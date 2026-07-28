@@ -1,6 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/guards";
-import { getRestaurantById } from "@/lib/data/restaurants";
+import { getAllCuisines, getRestaurantById } from "@/lib/data/restaurants";
+import { getAllNeighborhoods } from "@/lib/data/neighborhoods";
+import { db } from "@/db";
+import { CityNeighborhoodFields } from "@/components/CityNeighborhoodFields";
+import { CuisineCombobox } from "@/components/CuisineCombobox";
 import { updateRestaurant } from "../../actions";
 
 export default async function EditRestaurantPage({
@@ -14,6 +18,8 @@ export default async function EditRestaurantPage({
 
   const restaurant = await getRestaurantById(id);
   if (!restaurant) notFound();
+  const [neighborhoods, allCuisines] = await Promise.all([getAllNeighborhoods(db), getAllCuisines()]);
+  const cuisineNames = allCuisines.map((c) => c.name);
 
   async function update(formData: FormData) {
     "use server";
@@ -33,18 +39,13 @@ export default async function EditRestaurantPage({
           required
           className="rounded border px-3 py-2"
         />
-        <input
-          name="city"
-          defaultValue={restaurant!.city}
-          required
-          className="rounded border px-3 py-2"
+        <CityNeighborhoodFields
+          neighborhoods={neighborhoods}
+          initialCity={restaurant!.city}
+          initialNeighborhood={restaurant!.neighborhood?.name ?? ""}
+          cityRequired
         />
-        <input
-          name="neighborhood"
-          defaultValue={restaurant!.neighborhood ?? ""}
-          className="rounded border px-3 py-2"
-        />
-        <input name="cuisine" defaultValue={cuisineText} className="rounded border px-3 py-2" />
+        <CuisineCombobox name="cuisine" cuisines={cuisineNames} defaultValue={cuisineText} />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="isWalkIn" defaultChecked={restaurant!.isWalkIn ?? false} />{" "}
           Accepts walk-ins

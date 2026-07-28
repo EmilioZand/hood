@@ -4,7 +4,7 @@ import { eq, notInArray } from "drizzle-orm";
 import { db } from "../src/db";
 import { restaurants, restaurantMatchCandidates } from "../src/db/schema";
 import { rankCandidates } from "../src/lib/matching/fuzzyMatch";
-import { searchGooglePlaces } from "../src/lib/integrations/googlePlaces";
+import { queueGoogleMatchCandidates } from "../src/lib/data/googlePlacesMatch";
 import { searchYelpBusinesses } from "../src/lib/integrations/yelp";
 import { runScript } from "./runScript";
 
@@ -16,37 +16,8 @@ const NEEDS_REVIEW_THRESHOLD = 0.55;
 type Target = { id: string; name: string; city: string };
 
 async function matchGoogle(r: Target) {
-  const candidates = await searchGooglePlaces(
-    `${r.name} ${r.city}, CA restaurant`,
-    process.env.GOOGLE_PLACES_API_KEY!,
-  );
-
-  // Google's formattedAddress isn't reliably parseable into a clean city, so
-  // name-similarity carries the match — the text query already constrains by city.
-  const ranked = rankCandidates(
-    candidates.map((c) => ({ ...c, city: null })),
-    { name: r.name, city: null },
-  );
-
-  for (const [i, c] of ranked.slice(0, TOP_N).entries()) {
-    await db
-      .insert(restaurantMatchCandidates)
-      .values({
-        restaurantId: r.id,
-        source: "google",
-        candidateExtId: c.placeId,
-        candidateName: c.name,
-        candidateAddress: c.address,
-        candidateCity: null,
-        matchScore: c.matchScore.toFixed(3),
-        rank: i + 1,
-        rawPayload: c,
-        status: "pending",
-      })
-      .onConflictDoNothing();
-  }
-
-  return ranked[0]?.matchScore ?? 0;
+  const queued = await queueGoogleMatchCandidates(db, r, process.env.GOOGLE_PLACES_API_KEY!);
+  return queued[0]?.matchScore ?? 0;
 }
 
 async function matchYelp(r: Target) {

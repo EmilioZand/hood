@@ -17,6 +17,7 @@ export async function getRestaurantsWithRelations() {
       visits: { with: { user: true } },
       ratings: true,
       award: true,
+      neighborhood: true,
     },
     orderBy: (r, { asc }) => [asc(r.name)],
   });
@@ -32,6 +33,7 @@ export async function getRestaurantById(id: string) {
       ratings: true,
       notes: { with: { author: true }, orderBy: (n, { desc }) => [desc(n.createdAt)] },
       award: true,
+      neighborhood: true,
     },
   });
 }

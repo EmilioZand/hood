@@ -23,6 +23,7 @@ export function RestaurantMap({
   className = "h-[70vh] w-full rounded border",
   wrapperClassName,
   fitBounds = false,
+  linkBackTo,
 }: {
   pins: MapPin[];
   className?: string;
@@ -35,6 +36,9 @@ export function RestaurantMap({
   // Restaurant detail page: fit tightly around this restaurant's own location(s)
   // (one or several, for a chain) instead of the whole-region default view.
   fitBounds?: boolean;
+  // Current filtered list URL, carried onto each popup's restaurant link as `?back=`
+  // so its "Back to spots" link can return to this exact view.
+  linkBackTo?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -83,8 +87,9 @@ export function RestaurantMap({
     markersRef.current = [];
 
     for (const pin of pins) {
+      const backParam = linkBackTo ? `?back=${encodeURIComponent(linkBackTo)}` : "";
       const popupHtml = `
-        <a href="/restaurants/${pin.restaurantId}" style="font-weight:600;color:#1e3d32;text-decoration:underline">${escapeHtml(pin.name)}</a>
+        <a href="/restaurants/${pin.restaurantId}${backParam}" style="font-weight:600;color:#1e3d32;text-decoration:underline">${escapeHtml(pin.name)}</a>
         <div style="font-size:12px;color:#555;margin-top:2px">
           ${pin.address ? `${escapeHtml(pin.address)}<br/>` : ""}
           ${pin.cuisines.map(escapeHtml).join(", ")}
@@ -99,7 +104,7 @@ export function RestaurantMap({
 
       markersRef.current.push(marker);
     }
-  }, [pins]);
+  }, [pins, linkBackTo]);
 
   const map = <div ref={containerRef} className={className} />;
   return wrapperClassName ? <div className={wrapperClassName}>{map}</div> : map;

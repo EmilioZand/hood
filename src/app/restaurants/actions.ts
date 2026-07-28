@@ -13,20 +13,57 @@ import {
 } from "@/db/schema";
 import { requireAdmin, requireUser } from "@/lib/auth/guards";
 import { setCuisineTags } from "@/lib/data/cuisines";
+import { getOrCreateNeighborhoodId } from "@/lib/data/neighborhoods";
+import { rankCandidates, pickAutoConfirmWinner } from "@/lib/matching/fuzzyMatch";
+import { queueGoogleMatchCandidates } from "@/lib/data/googlePlacesMatch";
+import { applyConfirmedMatch } from "@/lib/data/matchCandidates";
 
-export async function createRestaurant(formData: FormData) {
+// Higher than restaurant_recommendations' duplicate-flagging bar (0.5) because this one
+// actually blocks creation (behind an explicit "create anyway" resubmit) rather than just
+// leaving an advisory note. At 0.5, two unrelated same-city restaurants with only a couple
+// of shared trigram fragments (e.g. "Zuni Cafe" vs "Bar Gemini", raw name similarity ~0.33)
+// could cross the line on the same-city boost alone. 0.65 requires a same-city match to
+// still carry a raw name score of ~0.53+ — comfortably below true near-duplicates (typo/
+// accent/generic-word variants score >0.85 in fuzzyMatch.test.ts) but above coincidental
+// city-only overlap.
+const DUPLICATE_THRESHOLD = 0.65;
+// Matches scripts/auto-confirm-matches.ts's bar for auto-confirming a Google match
+// without human review.
+const AUTO_CONFIRM_THRESHOLD = 0.8;
+
+export type CreateRestaurantResult =
+  | { duplicate: { id: string; name: string; city: string } }
+  | { id: string };
+
+export async function createRestaurant(formData: FormData): Promise<CreateRestaurantResult> {
   const admin = await requireAdmin();
 
   const name = String(formData.get("name") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   if (!name || !city) throw new Error("Name and city are required");
 
+  if (formData.get("confirmCreate") !== "1") {
+    const existing = await db
+      .select({ id: restaurants.id, name: restaurants.name, city: restaurants.city })
+      .from(restaurants);
+    const bestMatch = rankCandidates(existing, { name, city })[0];
+    if (bestMatch && bestMatch.matchScore >= DUPLICATE_THRESHOLD) {
+      return { duplicate: { id: bestMatch.id, name: bestMatch.name, city: bestMatch.city } };
+    }
+  }
+
+  const neighborhoodId = await getOrCreateNeighborhoodId(
+    db,
+    city,
+    String(formData.get("neighborhood") ?? "").trim() || null,
+  );
+
   const [created] = await db
     .insert(restaurants)
     .values({
       name,
       city,
-      neighborhood: String(formData.get("neighborhood") ?? "").trim() || null,
+      neighborhoodId,
       isWalkIn: formData.get("isWalkIn") === "on",
       createdBy: admin.id,
     })
@@ -34,8 +71,24 @@ export async function createRestaurant(formData: FormData) {
 
   await setCuisineTags(db, created.id, String(formData.get("cuisine") ?? ""));
 
+  // Best-effort — a Places lookup failure shouldn't block spot creation. Anything not
+  // auto-confirmed here is still queued as a pending candidate for /admin/matches.
+  if (process.env.GOOGLE_PLACES_API_KEY) {
+    try {
+      const queued = await queueGoogleMatchCandidates(
+        db,
+        { id: created.id, name, city },
+        process.env.GOOGLE_PLACES_API_KEY,
+      );
+      const winner = pickAutoConfirmWinner(queued, AUTO_CONFIRM_THRESHOLD);
+      if (winner) await applyConfirmedMatch(db, winner.id, admin.id);
+    } catch {
+      // Ignored — admin can still find/confirm a match later via /admin/matches.
+    }
+  }
+
   revalidatePath("/");
-  return created.id;
+  return { id: created.id };
 }
 
 const MICHELIN_STATUSES = [
@@ -54,12 +107,18 @@ export async function updateRestaurant(id: string, formData: FormData) {
   const city = String(formData.get("city") ?? "").trim();
   if (!name || !city) throw new Error("Name and city are required");
 
+  const neighborhoodId = await getOrCreateNeighborhoodId(
+    db,
+    city,
+    String(formData.get("neighborhood") ?? "").trim() || null,
+  );
+
   await db
     .update(restaurants)
     .set({
       name,
       city,
-      neighborhood: String(formData.get("neighborhood") ?? "").trim() || null,
+      neighborhoodId,
       isWalkIn: formData.get("isWalkIn") === "on",
       updatedAt: new Date(),
     })

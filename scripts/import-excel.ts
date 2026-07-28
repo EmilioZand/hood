@@ -4,6 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { db } from "../src/db";
 import { restaurants, restaurantNotes } from "../src/db/schema";
 import { addCuisineTags } from "../src/lib/data/cuisines";
+import { getOrCreateNeighborhoodId } from "../src/lib/data/neighborhoods";
 import { runScript } from "./runScript";
 
 const SHEET_NAME = "By Neighborhood";
@@ -78,10 +79,12 @@ async function importRow(row: SourceRow) {
     .where(and(eq(restaurants.name, row.name), eq(restaurants.city, row.city)))
     .limit(1);
 
+  const neighborhoodId = await getOrCreateNeighborhoodId(db, row.city, row.neighborhood);
+
   const values = {
     name: row.name,
     city: row.city,
-    neighborhood: row.neighborhood,
+    neighborhoodId,
     priority: row.isHighPriority ? ("high" as const) : ("none" as const),
     isHighPriority: row.isHighPriority,
     mentionCount: row.mentionCount,

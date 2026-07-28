@@ -78,6 +78,20 @@
       "when": 1785199780966,
       "tag": "20260728004940_add_restaurant_ratings",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785256238728,
+      "tag": "20260728163038_add_neighborhoods_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1785256335149,
+      "tag": "20260728163215_drop_old_neighborhood_text_column",
+      "breakpoints": true
     }
   ]
 }

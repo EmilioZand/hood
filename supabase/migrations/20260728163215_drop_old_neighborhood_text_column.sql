@@ -1,0 +1,5 @@
+-- No-op: the "neighborhood" text column was already dropped as part of the data
+-- backfill in 20260728163038_add_neighborhoods_table.sql (drizzle-kit generates this
+-- as a separate step since schema.ts temporarily kept both columns to avoid an
+-- ambiguous rename prompt — kept here only so drizzle-kit's snapshot tracking matches
+-- the schema.ts it was generated against).

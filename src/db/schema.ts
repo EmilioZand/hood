@@ -87,6 +87,20 @@ export const cuisines = pgTable("cuisines", {
   name: text("name").notNull().unique(),
 });
 
+// Scoped to a single city (not a global lookup) — the same neighborhood name can exist
+// as separate rows under different cities (e.g. "Napa Valley" is a real, distinct label
+// under both "Napa" and "Calistoga"), so the pair is what's canonical, not the name alone.
+export const neighborhoods = pgTable(
+  "neighborhoods",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    city: text("city").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.name, t.city)],
+);
+
 // A restaurant is one shared identity (name, cuisine, notes, visited status, priority,
 // awards) that can have multiple physical locations (see restaurantLocations) — e.g.
 // "Fiorella" has 3 SF locations, all sharing one set of notes/visited-by/priority, but
@@ -94,7 +108,7 @@ export const cuisines = pgTable("cuisines", {
 export const restaurants = pgTable("restaurants", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
-  neighborhood: text("neighborhood"),
+  neighborhoodId: uuid("neighborhood_id").references(() => neighborhoods.id),
   city: text("city").notNull(),
   priority: priorityEnum("priority").notNull().default("none"),
   isHighPriority: boolean("is_high_priority").notNull().default(false),
@@ -299,6 +313,10 @@ export const restaurantsRelations = relations(restaurants, ({ many, one }) => ({
   visits: many(restaurantVisits),
   ratings: many(restaurantRatings),
   notes: many(restaurantNotes),
+  neighborhood: one(neighborhoods, {
+    fields: [restaurants.neighborhoodId],
+    references: [neighborhoods.id],
+  }),
   award: one(restaurantAwards, {
     fields: [restaurants.id],
     references: [restaurantAwards.restaurantId],

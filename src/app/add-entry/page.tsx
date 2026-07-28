@@ -3,14 +3,23 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { restaurantRecommendations, restaurants } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
+import { getAllNeighborhoods } from "@/lib/data/neighborhoods";
+import { getAllCuisines } from "@/lib/data/restaurants";
+import { CityNeighborhoodFields } from "@/components/CityNeighborhoodFields";
+import { CuisineCombobox } from "@/components/CuisineCombobox";
 import { submitRecommendation } from "./actions";
 
 export default async function AddEntryPage() {
   await requireUser();
 
-  const submissions = await db.query.restaurantRecommendations.findMany({
-    orderBy: [desc(restaurantRecommendations.createdAt)],
-  });
+  const [submissions, neighborhoods, allCuisines] = await Promise.all([
+    db.query.restaurantRecommendations.findMany({
+      orderBy: [desc(restaurantRecommendations.createdAt)],
+    }),
+    getAllNeighborhoods(db),
+    getAllCuisines(),
+  ]);
+  const cuisineNames = allCuisines.map((c) => c.name);
 
   const duplicateNames = new Map<string, string>();
   for (const sub of submissions) {
@@ -33,9 +42,8 @@ export default async function AddEntryPage() {
 
       <form action={submitRecommendation} className="mb-8 flex flex-col gap-3">
         <input name="name" placeholder="Name" required className="rounded border px-3 py-2" />
-        <input name="city" placeholder="City" className="rounded border px-3 py-2" />
-        <input name="neighborhood" placeholder="Neighborhood" className="rounded border px-3 py-2" />
-        <input name="cuisine" placeholder="Cuisine" className="rounded border px-3 py-2" />
+        <CityNeighborhoodFields neighborhoods={neighborhoods} />
+        <CuisineCombobox name="cuisine" cuisines={cuisineNames} placeholder="Cuisine" />
         <textarea name="notes" placeholder="Why should we try it?" className="rounded border px-3 py-2" />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="alreadyVisited" /> I&apos;ve been there

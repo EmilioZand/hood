@@ -21,13 +21,24 @@ const JAMES_BEARD_LABELS: Record<string, string> = {
   winner: "Winner",
 };
 
+// Only ever used as a same-origin Link href, but `back` arrives via a query param and
+// could in principle be crafted (e.g. "//evil.com") into a host-changing URL — restrict
+// it to an actual relative path before trusting it.
+function isSafeRelativePath(path: string): boolean {
+  return path.startsWith("/") && !path.startsWith("//") && !path.startsWith("/\\");
+}
+
 export default async function RestaurantDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ back?: string }>;
 }) {
   const user = await requireUser();
   const { id } = await params;
+  const { back } = await searchParams;
+  const backHref = back && isSafeRelativePath(back) ? back : "/";
   const restaurant = await getRestaurantById(id);
   if (!restaurant) notFound();
 
@@ -68,6 +79,12 @@ export default async function RestaurantDetailPage({
 
   return (
     <main className="mx-auto max-w-5xl p-6">
+      <Link
+        href={backHref}
+        className="mb-4 -ml-2 inline-flex items-center gap-1 rounded px-2 py-1.5 text-sm text-gray-600 hover:text-brand-green"
+      >
+        <span aria-hidden="true">←</span> Back to spots
+      </Link>
       <div className="grid gap-8 md:grid-cols-2">
       <div>
         {geolocatedLocations.length > 0 ? (
@@ -104,7 +121,7 @@ export default async function RestaurantDetailPage({
         <div>
           <h1 className="text-2xl font-semibold">{restaurant.name}</h1>
           <p className="text-gray-600">
-            {restaurant.neighborhood ? `${restaurant.neighborhood}, ` : ""}
+            {restaurant.neighborhood ? `${restaurant.neighborhood.name}, ` : ""}
             {restaurant.city}
           </p>
           {restaurant.locations.length > 1 && (
