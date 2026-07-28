@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Hood",
-  description: "Good spots. Close to home.",
+  description: "What's good in the hood?",
 };
 
 export default function RootLayout({

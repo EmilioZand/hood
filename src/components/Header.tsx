@@ -24,7 +24,7 @@ export async function Header() {
     <header className="flex flex-wrap items-center gap-3 bg-brand-green px-6 py-3 text-brand-cream sm:grid sm:grid-cols-[auto_1fr_auto] sm:flex-nowrap">
       <Link href="/" className="flex items-center gap-2">
         <Image src="/icon.png" alt="" width={36} height={36}/>
-        <span className="hidden text-xs text-brand-cream/70 sm:inline">Good spots. Close to home.</span>
+        <span className="hidden text-xs text-brand-cream/70 sm:inline">What's good in the hood?</span>
       </Link>
       {isApproved && (
         <div className="order-last w-full sm:order-none sm:mx-auto sm:w-full sm:max-w-xl">
