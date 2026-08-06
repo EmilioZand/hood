@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
@@ -39,7 +40,9 @@ export default async function UsersPage() {
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{u.displayName ?? "Unnamed user"}</span>
+                    <Link href={`/users/${u.id}`} className="font-medium hover:underline">
+                      {u.displayName ?? "Unnamed user"}
+                    </Link>
                     {u.isAdmin && (
                       <span className="rounded bg-brand-gold/20 px-1.5 py-0.5 text-xs text-brand-gold-dark">
                         Admin

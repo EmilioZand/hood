@@ -24,6 +24,7 @@ export type CurrentUser = {
   email: string | null;
   isAdmin: boolean;
   displayName: string | null;
+  avatarUrl: string | null;
 };
 
 // The real authorization gate. proxy.ts only redirects the browser for UX;
@@ -52,6 +53,7 @@ export async function requireUser(): Promise<CurrentUser> {
     email: user.email ?? null,
     isAdmin: profile?.isAdmin ?? false,
     displayName: profile?.displayName ?? null,
+    avatarUrl: profile?.avatarUrl ?? null,
   };
 }
 

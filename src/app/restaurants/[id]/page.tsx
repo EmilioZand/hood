@@ -319,7 +319,14 @@ export default async function RestaurantDetailPage({
         ) : (
           <p>
             Visited by:{" "}
-            {restaurant.visits.map((v) => v.user.displayName || "a user").join(", ")}
+            {restaurant.visits.map((v, i) => (
+              <span key={v.userId}>
+                {i > 0 && ", "}
+                <Link href={`/users/${v.userId}`} className="hover:underline">
+                  {v.user.displayName || "a user"}
+                </Link>
+              </span>
+            ))}
           </p>
         )}
       </div>
@@ -344,7 +351,14 @@ export default async function RestaurantDetailPage({
               <li key={n.id} className="rounded border px-3 py-2 text-sm">
                 <p>{n.body}</p>
                 <p className="mt-1 text-xs text-gray-700">
-                  {n.author?.displayName || "Unknown"} · {n.createdAt.toLocaleDateString()}
+                  {n.authorId ? (
+                    <Link href={`/users/${n.authorId}`} className="hover:underline">
+                      {n.author?.displayName || "Unknown"}
+                    </Link>
+                  ) : (
+                    n.author?.displayName || "Unknown"
+                  )}{" "}
+                  · {n.createdAt.toLocaleDateString()}
                 </p>
               </li>
             ))}

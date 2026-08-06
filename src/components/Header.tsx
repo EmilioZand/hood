@@ -7,6 +7,7 @@ import { profiles } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
 import { SearchBox } from "@/components/SearchBox";
+import { Avatar } from "@/components/Avatar";
 
 export async function Header() {
   const supabase = await createClient();
@@ -49,6 +50,9 @@ export async function Header() {
             )}
           </>
         )}
+        <Link href={`/users/${user.id}`} aria-label="Your profile">
+          <Avatar avatarUrl={profile?.avatarUrl ?? null} displayName={profile?.displayName ?? null} size={32} />
+        </Link>
         <form action={signOut}>
           <button
             type="submit"

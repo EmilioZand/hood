@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { invites } from "@/db/schema";
@@ -82,7 +83,10 @@ export default async function InvitesPage() {
                   <p className="mt-1 truncate text-xs text-gray-600">{link}</p>
                   {status === "used" && (
                     <p className="mt-1 text-xs text-gray-600">
-                      Redeemed by {usedByName.get(invite.usedBy!) ?? "a user"}
+                      Redeemed by{" "}
+                      <Link href={`/users/${invite.usedBy}`} className="hover:underline">
+                        {usedByName.get(invite.usedBy!) ?? "a user"}
+                      </Link>
                     </p>
                   )}
                 </div>
