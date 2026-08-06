@@ -13,7 +13,7 @@ export async function getRestaurantsWithRelations() {
   return db.query.restaurants.findMany({
     with: {
       locations: true,
-      cuisines: { with: { cuisine: true } },
+      cuisines: { with: { cuisine: { with: { group: true } } } },
       visits: { with: { user: true } },
       ratings: true,
       award: true,
@@ -28,7 +28,7 @@ export async function getRestaurantById(id: string) {
     where: eq(restaurants.id, id),
     with: {
       locations: true,
-      cuisines: { with: { cuisine: true } },
+      cuisines: { with: { cuisine: { with: { group: true } } } },
       visits: { with: { user: true } },
       ratings: true,
       notes: { with: { author: true }, orderBy: (n, { desc }) => [desc(n.createdAt)] },

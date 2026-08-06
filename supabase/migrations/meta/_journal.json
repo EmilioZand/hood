@@ -92,6 +92,13 @@
       "when": 1785256335149,
       "tag": "20260728163215_drop_old_neighborhood_text_column",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786028090951,
+      "tag": "20260806145450_add_cuisine_groups",
+      "breakpoints": true
     }
   ]
 }

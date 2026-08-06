@@ -29,7 +29,11 @@ function matchesSearch(r: RestaurantListItem, query: string): boolean {
     r.name.toLowerCase().includes(query) ||
     r.city.toLowerCase().includes(query) ||
     (r.neighborhood?.name.toLowerCase().includes(query) ?? false) ||
-    r.cuisines.some((c) => c.cuisine.name.toLowerCase().includes(query))
+    r.cuisines.some(
+      (c) =>
+        c.cuisine.name.toLowerCase().includes(query) ||
+        (c.cuisine.group?.name.toLowerCase().includes(query) ?? false),
+    )
   );
 }
 

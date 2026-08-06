@@ -82,9 +82,21 @@ export const invites = pgTable("invites", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Broad category ("Asian", "Latin American"...) that free-text cuisine tags roll up
+// into for search — lets a query like "asian" match a restaurant tagged "Japanese"
+// even though that word never appears in the tag itself. Assigned by keyword-matching
+// in lib/data/cuisineGroups.ts, not user-editable.
+export const cuisineGroups = pgTable("cuisine_groups", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+});
+
 export const cuisines = pgTable("cuisines", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull().unique(),
+  // Nullable: plenty of tags (venue/format words like "Bar", "Steak") have no single
+  // national origin and are deliberately left ungrouped rather than guessed at.
+  groupId: uuid("group_id").references(() => cuisineGroups.id, { onDelete: "set null" }),
 });
 
 // Scoped to a single city (not a global lookup) — the same neighborhood name can exist
@@ -331,6 +343,17 @@ export const restaurantLocationsRelations = relations(restaurantLocations, ({ on
   restaurant: one(restaurants, {
     fields: [restaurantLocations.restaurantId],
     references: [restaurants.id],
+  }),
+}));
+
+export const cuisineGroupsRelations = relations(cuisineGroups, ({ many }) => ({
+  cuisines: many(cuisines),
+}));
+
+export const cuisinesRelations = relations(cuisines, ({ one }) => ({
+  group: one(cuisineGroups, {
+    fields: [cuisines.groupId],
+    references: [cuisineGroups.id],
   }),
 }));
 

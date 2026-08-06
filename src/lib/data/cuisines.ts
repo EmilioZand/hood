@@ -1,12 +1,21 @@
 import { eq } from "drizzle-orm";
 import type { db as dbType } from "@/db";
-import { cuisines, restaurantCuisines } from "@/db/schema";
+import { cuisineGroups, cuisines, restaurantCuisines } from "@/db/schema";
 import { splitCuisines } from "@/lib/import/cuisines";
+import { classifyCuisineGroup } from "@/lib/data/cuisineGroups";
 
 export async function getOrCreateCuisine(db: typeof dbType, name: string): Promise<string> {
   const [existing] = await db.select().from(cuisines).where(eq(cuisines.name, name)).limit(1);
   if (existing) return existing.id;
-  const [created] = await db.insert(cuisines).values({ name }).returning();
+
+  const groupName = classifyCuisineGroup(name);
+  let groupId: string | null = null;
+  if (groupName) {
+    const [group] = await db.select().from(cuisineGroups).where(eq(cuisineGroups.name, groupName)).limit(1);
+    groupId = group?.id ?? null;
+  }
+
+  const [created] = await db.insert(cuisines).values({ name, groupId }).returning();
   return created.id;
 }
 
