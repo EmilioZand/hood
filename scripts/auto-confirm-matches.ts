@@ -3,10 +3,10 @@ import { eq } from "drizzle-orm";
 import { db } from "../src/db";
 import { restaurantMatchCandidates } from "../src/db/schema";
 import { applyConfirmedMatch } from "../src/lib/data/matchCandidates";
-import { pickAutoConfirmWinner } from "../src/lib/matching/fuzzyMatch";
+import { pickAutoConfirmWinner, GOOGLE_AUTO_CONFIRM_THRESHOLD } from "../src/lib/matching/fuzzyMatch";
 import { runScript } from "./runScript";
 
-const AUTO_CONFIRM_THRESHOLD = 0.8;
+const AUTO_CONFIRM_THRESHOLD = GOOGLE_AUTO_CONFIRM_THRESHOLD;
 const AUTO_CONFIRM_MARGIN = 0.15;
 
 runScript(async () => {

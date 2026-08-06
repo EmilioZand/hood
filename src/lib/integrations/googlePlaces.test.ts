@@ -14,6 +14,8 @@ describe("mapGooglePlace", () => {
       ratingCount: 129,
       businessStatus: "OPERATIONAL",
       openingHours: { periods: fixture.regularOpeningHours.periods },
+      neighborhood: "Gold Coast",
+      cuisine: "Japanese",
     });
   });
 
@@ -29,6 +31,32 @@ describe("mapGooglePlace", () => {
       ratingCount: null,
       businessStatus: null,
       openingHours: null,
+      neighborhood: null,
+      cuisine: null,
     });
+  });
+
+  it("falls back to a sublocality when no neighborhood component is present", () => {
+    const result = mapGooglePlace({
+      id: "abc123",
+      addressComponents: [
+        { longText: "SoMa", shortText: "SoMa", types: ["sublocality_level_1", "sublocality", "political"] },
+        { longText: "San Francisco", shortText: "SF", types: ["locality", "political"] },
+      ],
+    });
+    expect(result.neighborhood).toBe("SoMa");
+  });
+
+  it("leaves neighborhood null when no neighborhood-like component exists", () => {
+    const result = mapGooglePlace({
+      id: "abc123",
+      addressComponents: [{ longText: "San Francisco", shortText: "SF", types: ["locality", "political"] }],
+    });
+    expect(result.neighborhood).toBeNull();
+  });
+
+  it("leaves a non-restaurant type display name untouched", () => {
+    const result = mapGooglePlace({ id: "abc123", primaryTypeDisplayName: { text: "Bakery" } });
+    expect(result.cuisine).toBe("Bakery");
   });
 });

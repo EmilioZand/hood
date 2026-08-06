@@ -148,6 +148,10 @@ export function rankCandidates<T extends MatchCandidate>(
     .sort((a, b) => b.matchScore - a.matchScore);
 }
 
+// Shared across every Google-match auto-confirm caller (spot creation, the add-a-spot
+// wizard's prefill, and the standalone auto-confirm script) so the bar for "confident
+// enough to write without human review" can't silently drift apart between them.
+export const GOOGLE_AUTO_CONFIRM_THRESHOLD = 0.8;
 const DEFAULT_AUTO_CONFIRM_MARGIN = 0.15;
 
 /**

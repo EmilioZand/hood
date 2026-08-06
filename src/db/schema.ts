@@ -311,11 +311,14 @@ export const restaurantRecommendations = pgTable("restaurant_recommendations", {
   isHighPriority: boolean("is_high_priority").notNull().default(false),
   alreadyVisited: boolean("already_visited").notNull().default(false),
   suggestedBy: uuid("suggested_by").references(() => profiles.id),
-  possibleDuplicateOf: uuid("possible_duplicate_of").references(() => restaurants.id),
+  // Unlike every other restaurant_* table (which cascades — they're detail records with
+  // no meaning outside their parent), this row is a submission log: it should survive the
+  // referenced restaurant being deleted, just with the now-dangling pointer cleared.
+  possibleDuplicateOf: uuid("possible_duplicate_of").references(() => restaurants.id, { onDelete: "set null" }),
   status: recommendationStatusEnum("status").notNull().default("pending"),
   reviewedBy: uuid("reviewed_by").references(() => profiles.id),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
-  resultingRestaurantId: uuid("resulting_restaurant_id").references(() => restaurants.id),
+  resultingRestaurantId: uuid("resulting_restaurant_id").references(() => restaurants.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

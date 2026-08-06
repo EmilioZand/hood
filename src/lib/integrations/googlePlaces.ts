@@ -15,17 +15,51 @@ export type GooglePlaceCandidate = {
   ratingCount: number | null;
   businessStatus: string | null;
   openingHours: { periods: OpeningPeriod[] } | null;
+  // Used only to auto-populate a new spot's Neighborhood/Cuisine fields when they're
+  // left blank (see add-entry/actions.ts's submitRecommendation) — never overwrites
+  // anything a human typed.
+  neighborhood: string | null;
+  cuisine: string | null;
 };
+
+type AddressComponent = { longText?: string; shortText?: string; types?: string[] };
+
+// Google returns the most specific neighborhood-like component first when present;
+// "sublocality" components (district-level, broader than a neighborhood) are the closest
+// fallback when "neighborhood" itself is absent.
+const NEIGHBORHOOD_COMPONENT_TYPES = ["neighborhood", "sublocality_level_1", "sublocality"];
+
+function extractNeighborhood(components: AddressComponent[] | undefined): string | null {
+  if (!components) return null;
+  for (const type of NEIGHBORHOOD_COMPONENT_TYPES) {
+    const match = components.find((c) => c.types?.includes(type));
+    if (match) return match.longText ?? match.shortText ?? null;
+  }
+  return null;
+}
+
+// Google's primaryTypeDisplayName reads like "Japanese Restaurant" or "Sushi Restaurant" —
+// close enough to our own free-text cuisine tags (e.g. "Japanese") once the generic
+// " Restaurant" suffix is stripped. Left as-is for types that aren't restaurant-shaped
+// (e.g. "Cafe", "Bakery" — both already exist as real cuisine tags in this app).
+function deriveCuisine(primaryTypeDisplayName: { text?: string } | undefined): string | null {
+  const text = primaryTypeDisplayName?.text?.trim();
+  if (!text) return null;
+  const stripped = text.replace(/\s+Restaurant$/i, "").trim();
+  return stripped || null;
+}
 
 const SEARCH_FIELD_MASK = [
   "places.id",
   "places.displayName",
   "places.formattedAddress",
+  "places.addressComponents",
   "places.location",
   "places.rating",
   "places.userRatingCount",
   "places.businessStatus",
   "places.regularOpeningHours.periods",
+  "places.primaryTypeDisplayName",
 ].join(",");
 
 /** Maps a single raw Places API (New) result into our candidate shape. Pure — no network, easy to unit test. */
@@ -33,11 +67,13 @@ export function mapGooglePlace(place: {
   id: string;
   displayName?: { text?: string };
   formattedAddress?: string;
+  addressComponents?: AddressComponent[];
   location?: { latitude?: number; longitude?: number };
   rating?: number;
   userRatingCount?: number;
   businessStatus?: string;
   regularOpeningHours?: { periods?: OpeningPeriod[] };
+  primaryTypeDisplayName?: { text?: string };
 }): GooglePlaceCandidate {
   return {
     placeId: place.id,
@@ -51,6 +87,8 @@ export function mapGooglePlace(place: {
     openingHours: place.regularOpeningHours?.periods
       ? { periods: place.regularOpeningHours.periods }
       : null,
+    neighborhood: extractNeighborhood(place.addressComponents),
+    cuisine: deriveCuisine(place.primaryTypeDisplayName),
   };
 }
 

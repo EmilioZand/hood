@@ -46,6 +46,8 @@ describe("syncRestaurantRatings", () => {
       ratingCount: 88,
       businessStatus: "OPERATIONAL",
       openingHours: { periods: [] },
+      neighborhood: null,
+      cuisine: null,
     });
     vi.mocked(getYelpBusinessDetails).mockResolvedValue({
       businessId: "y1",
@@ -85,6 +87,8 @@ describe("syncRestaurantRatings", () => {
       ratingCount: null,
       businessStatus: "CLOSED_PERMANENTLY",
       openingHours: null,
+      neighborhood: null,
+      cuisine: null,
     });
 
     const { db, getCaptured } = fakeDb();
@@ -110,6 +114,8 @@ describe("syncRestaurantRatings", () => {
       ratingCount: 10,
       businessStatus: "OPERATIONAL",
       openingHours: null,
+      neighborhood: null,
+      cuisine: null,
     });
 
     const { db, getCaptured } = fakeDb();
@@ -135,6 +141,8 @@ describe("syncRestaurantRatings", () => {
       ratingCount: null,
       businessStatus: "CLOSED_PERMANENTLY",
       openingHours: null,
+      neighborhood: null,
+      cuisine: null,
     });
 
     const { db, getCaptured } = fakeDb();
@@ -184,6 +192,8 @@ describe("syncRestaurantRatings", () => {
       ratingCount: 20,
       businessStatus: "OPERATIONAL",
       openingHours: null,
+      neighborhood: null,
+      cuisine: null,
     });
 
     const { db, getCaptured } = fakeDb();

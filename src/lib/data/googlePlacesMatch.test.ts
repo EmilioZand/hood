@@ -44,6 +44,8 @@ describe("queueGoogleMatchCandidates", () => {
         ratingCount: 200,
         businessStatus: "OPERATIONAL",
         openingHours: null,
+        neighborhood: "Marina",
+        cuisine: "Italian",
       },
     ]);
 
@@ -57,7 +59,9 @@ describe("queueGoogleMatchCandidates", () => {
       candidateExtId: "place-1",
       status: "pending",
     });
-    expect(queued).toEqual([{ id: "row-1", matchScore: expect.any(Number) }]);
+    expect(queued).toEqual([
+      { id: "row-1", matchScore: expect.any(Number), neighborhood: "Marina", cuisine: "Italian" },
+    ]);
   });
 
   it("caps at the top 3 candidates when more are returned", async () => {
@@ -72,6 +76,8 @@ describe("queueGoogleMatchCandidates", () => {
         ratingCount: null,
         businessStatus: null,
         openingHours: null,
+        neighborhood: null,
+        cuisine: null,
       })),
     );
 
@@ -84,8 +90,8 @@ describe("queueGoogleMatchCandidates", () => {
 
   it("excludes candidates skipped by onConflictDoNothing (already queued) from the result", async () => {
     vi.mocked(searchGooglePlaces).mockResolvedValue([
-      { placeId: "place-1", name: "Fiorella", address: null, latitude: null, longitude: null, rating: null, ratingCount: null, businessStatus: null, openingHours: null },
-      { placeId: "place-2", name: "Fiorella", address: null, latitude: null, longitude: null, rating: null, ratingCount: null, businessStatus: null, openingHours: null },
+      { placeId: "place-1", name: "Fiorella", address: null, latitude: null, longitude: null, rating: null, ratingCount: null, businessStatus: null, openingHours: null, neighborhood: null, cuisine: null },
+      { placeId: "place-2", name: "Fiorella", address: null, latitude: null, longitude: null, rating: null, ratingCount: null, businessStatus: null, openingHours: null, neighborhood: null, cuisine: null },
     ]);
 
     const { db } = fakeDb(new Set(["place-1"]));

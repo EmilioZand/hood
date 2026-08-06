@@ -61,6 +61,8 @@ const googleCandidate = (overrides: Partial<Record<string, unknown>> = {}) => ({
     ratingCount: 200,
     businessStatus: "OPERATIONAL",
     openingHours: null,
+    neighborhood: null,
+    cuisine: null,
   } satisfies GooglePlaceCandidate,
   ...overrides,
 });

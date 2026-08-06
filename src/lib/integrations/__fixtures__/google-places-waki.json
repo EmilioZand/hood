@@ -12,6 +12,20 @@
     "text": "Waki",
     "languageCode": "en"
   },
+  "addressComponents": [
+    { "longText": "1403", "shortText": "1403", "types": ["street_number"] },
+    { "longText": "Webster Street", "shortText": "Webster St", "types": ["route"] },
+    { "longText": "Gold Coast", "shortText": "Gold Coast", "types": ["neighborhood", "political"] },
+    { "longText": "Alameda", "shortText": "Alameda", "types": ["locality", "political"] },
+    { "longText": "Alameda County", "shortText": "Alameda County", "types": ["administrative_area_level_2", "political"] },
+    { "longText": "California", "shortText": "CA", "types": ["administrative_area_level_1", "political"] },
+    { "longText": "United States", "shortText": "US", "types": ["country", "political"] },
+    { "longText": "94501", "shortText": "94501", "types": ["postal_code"] }
+  ],
+  "primaryTypeDisplayName": {
+    "text": "Japanese Restaurant",
+    "languageCode": "en"
+  },
   "regularOpeningHours": {
     "openNow": false,
     "periods": [

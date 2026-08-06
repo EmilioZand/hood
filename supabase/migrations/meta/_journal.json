@@ -99,6 +99,13 @@
       "when": 1786028090951,
       "tag": "20260806145450_add_cuisine_groups",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1786035500203,
+      "tag": "20260806165820_fix_recommendation_delete_cascade",
+      "breakpoints": true
     }
   ]
 }

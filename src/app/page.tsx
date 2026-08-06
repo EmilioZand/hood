@@ -211,11 +211,9 @@ export default async function HomePage({
         <h1 className="text-2xl font-semibold">
           {filteredRestaurants.length} spot{filteredRestaurants.length === 1 ? "" : "s"}
         </h1>
-        {user.isAdmin && (
-          <Link href="/restaurants/new" className="rounded bg-brand-green px-3 py-2 text-sm text-brand-cream hover:bg-brand-green-dark">
-            + Add spot
-          </Link>
-        )}
+        <Link href="/add-entry" className="rounded bg-brand-green px-3 py-2 text-sm text-brand-cream hover:bg-brand-green-dark">
+          + Add spot
+        </Link>
       </div>
 
       <FilterForm className="mb-4 flex flex-col gap-3 rounded-lg border bg-brand-green/5 p-4">
