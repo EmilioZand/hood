@@ -42,10 +42,20 @@ function matchesSharedFilters(
   filters: Filters,
   activeNeighborhood: string | undefined,
   currentUserId: string,
+  cuisineGroupNames: string[],
 ): boolean {
   if (activeNeighborhood && r.neighborhood?.name !== activeNeighborhood) return false;
   if (filters.city && r.city !== filters.city) return false;
-  if (filters.cuisine && !r.cuisines.some((c) => c.cuisine.name === filters.cuisine)) return false;
+  if (filters.cuisine) {
+    // A group name (e.g. "Asian") wins over a same-named raw tag — the dropdown only
+    // ever offers one of the two per name (see cuisineOptions below), and the group
+    // match is a superset anyway since a tag literally named "Asian" belongs to the
+    // Asian group too.
+    const matchesCuisine = cuisineGroupNames.includes(filters.cuisine)
+      ? r.cuisines.some((c) => c.cuisine.group?.name === filters.cuisine)
+      : r.cuisines.some((c) => c.cuisine.name === filters.cuisine);
+    if (!matchesCuisine) return false;
+  }
   if (filters.highPriority === "1" && !r.isHighPriority) return false;
   if (filters.walkIn === "1" && r.isWalkIn !== true) return false;
   if (filters.visited === "mine" && !r.visits.some((v) => v.userId === currentUserId)) return false;
@@ -98,7 +108,25 @@ export default async function HomePage({
     ),
   ].sort();
   const cities = [...new Set(all.map((r) => r.city))].sort();
-  const cuisineNames = [...new Set(all.flatMap((r) => r.cuisines.map((c) => c.cuisine.name)))].sort();
+
+  // Cuisine groups (e.g. "Asian") stand alongside specific tags (e.g. "Japanese") in the
+  // same dropdown so a user can filter as broad or narrow as they like. Where a raw tag
+  // happens to share a group's name (e.g. the literal "Asian" tag), the group wins and
+  // the tag is dropped from the list — matchesSharedFilters resolves that same name back
+  // to a group-level filter, which already covers restaurants carrying that raw tag too.
+  const cuisineGroupNames = [
+    ...new Set(
+      all.flatMap((r) => r.cuisines.map((c) => c.cuisine.group?.name).filter((n): n is string => !!n)),
+    ),
+  ];
+  const cuisineNames = [
+    ...new Set([
+      ...cuisineGroupNames,
+      ...all
+        .flatMap((r) => r.cuisines.map((c) => c.cuisine.name))
+        .filter((name) => !cuisineGroupNames.includes(name)),
+    ]),
+  ].sort();
 
   // A neighborhood picked before switching cities may no longer apply — ignore it
   // rather than silently filtering to zero results.
@@ -121,7 +149,7 @@ export default async function HomePage({
   ];
 
   const filteredRestaurants = all.filter((r) =>
-    matchesSharedFilters(r, filters, activeNeighborhood, user.id),
+    matchesSharedFilters(r, filters, activeNeighborhood, user.id, cuisineGroupNames),
   );
 
   const activeFilterCount = [
