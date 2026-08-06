@@ -3,19 +3,24 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/db";
-import { profiles, restaurantRatings, restaurantVisits } from "@/db/schema";
+import { restaurantRatings, restaurantVisits } from "@/db/schema";
+import { getAllNeighborhoods } from "@/lib/data/neighborhoods";
 import { Avatar } from "@/components/Avatar";
 import { AvatarUploadForm } from "@/components/AvatarUploadForm";
-import { DisplayNameEditor } from "@/components/DisplayNameEditor";
+import { ProfileEditor } from "@/components/ProfileEditor";
 
 export default async function UserProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const currentUser = await requireUser();
   const { id } = await params;
 
-  const [profile] = await db.select().from(profiles).where(eq(profiles.id, id)).limit(1);
+  const [profile, neighborhoods] = await Promise.all([
+    db.query.profiles.findFirst({ where: (p, { eq }) => eq(p.id, id), with: { neighborhood: true } }),
+    getAllNeighborhoods(db),
+  ]);
   if (!profile) notFound();
 
   const isOwnProfile = id === currentUser.id;
+  const location = [profile.neighborhood?.name, profile.city].filter(Boolean).join(", ");
 
   const [visits, ratings] = await Promise.all([
     db.query.restaurantVisits.findMany({
@@ -73,9 +78,17 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
           {isOwnProfile && <AvatarUploadForm />}
 
           {isOwnProfile ? (
-            <DisplayNameEditor displayName={profile.displayName} />
+            <ProfileEditor
+              displayName={profile.displayName}
+              city={profile.city}
+              neighborhood={profile.neighborhood?.name ?? null}
+              neighborhoods={neighborhoods}
+            />
           ) : (
-            <span className="text-xl font-semibold">{profile.displayName ?? "Unnamed user"}</span>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-xl font-semibold">{profile.displayName ?? "Unnamed user"}</span>
+              {location && <span className="text-sm text-gray-600">Lives in {location}</span>}
+            </div>
           )}
 
           <dl className="w-full text-sm text-gray-600">

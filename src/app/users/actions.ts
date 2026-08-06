@@ -6,13 +6,19 @@ import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { requireUser } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
+import { getOrCreateNeighborhoodId } from "@/lib/data/neighborhoods";
 
 export async function updateProfile(formData: FormData) {
   const user = await requireUser();
   const displayName = String(formData.get("displayName") ?? "").trim();
   if (!displayName) throw new Error("Display name is required");
+  const city = String(formData.get("city") ?? "").trim() || null;
+  const neighborhoodName = String(formData.get("neighborhood") ?? "").trim() || null;
+  // No city means no neighborhood either — same invariant restaurants already keep
+  // (a neighborhood is always scoped to a city).
+  const neighborhoodId = city ? await getOrCreateNeighborhoodId(db, city, neighborhoodName) : null;
 
-  await db.update(profiles).set({ displayName }).where(eq(profiles.id, user.id));
+  await db.update(profiles).set({ displayName, city, neighborhoodId }).where(eq(profiles.id, user.id));
   revalidatePath(`/users/${user.id}`);
 }
 

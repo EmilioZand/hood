@@ -60,6 +60,10 @@ export const profiles = pgTable("profiles", {
     .references(() => authUsers.id, { onDelete: "cascade" }),
   displayName: text("display_name"),
   avatarUrl: text("avatar_url"),
+  // Where they live, not a restaurant's location — same city + city-scoped neighborhood
+  // pattern restaurants already use, both optional (existing users won't have one set).
+  city: text("city"),
+  neighborhoodId: uuid("neighborhood_id").references(() => neighborhoods.id),
   isAdmin: boolean("is_admin").notNull().default(false),
   // New accounts start unapproved — only flipped to true by redeeming a valid invite
   // (see `invites` below). Existing rows are backfilled to true by migration.
@@ -339,6 +343,13 @@ export const restaurantsRelations = relations(restaurants, ({ many, one }) => ({
   createdByProfile: one(profiles, {
     fields: [restaurants.createdBy],
     references: [profiles.id],
+  }),
+}));
+
+export const profilesRelations = relations(profiles, ({ one }) => ({
+  neighborhood: one(neighborhoods, {
+    fields: [profiles.neighborhoodId],
+    references: [neighborhoods.id],
   }),
 }));
 
