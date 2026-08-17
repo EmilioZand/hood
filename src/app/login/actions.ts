@@ -6,11 +6,15 @@ import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { consumeInvite, validateInvite } from "@/lib/data/invites";
+import { safeRedirectPath } from "@/lib/http/safeRedirect";
 
 export async function signInWithPassword(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
-  const redirectTo = String(formData.get("redirectTo") ?? "/");
+  // Untrusted: originates from ?redirectTo= and is echoed into a hidden field. Sanitized
+  // because redirect() accepts absolute URLs, which would let a crafted login link bounce
+  // a just-authenticated user to a credential-harvesting lookalike.
+  const redirectTo = safeRedirectPath(formData.get("redirectTo")?.toString());
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -63,7 +67,9 @@ export async function signInWithGoogle(redirectTo: string, inviteToken?: string)
   const supabase = await createClient();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
   const callbackUrl = new URL(`${siteUrl}/auth/callback`);
-  callbackUrl.searchParams.set("redirectTo", redirectTo);
+  // Sanitized here so a bad value never even enters the OAuth round trip; the callback
+  // sanitizes again at the point of redirect, since this param leaves our control in between.
+  callbackUrl.searchParams.set("redirectTo", safeRedirectPath(redirectTo));
   if (inviteToken) callbackUrl.searchParams.set("invite", inviteToken);
 
   const { data, error } = await supabase.auth.signInWithOAuth({

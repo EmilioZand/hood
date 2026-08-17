@@ -15,6 +15,7 @@ import {
 import { RestaurantMap } from "@/components/RestaurantMap";
 import { AverageRating } from "@/components/AverageRating";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
+import { safeRedirectPath } from "@/lib/http/safeRedirect";
 
 const MICHELIN_LABELS: Record<string, string> = {
   selected: "Selected",
@@ -30,13 +31,6 @@ const JAMES_BEARD_LABELS: Record<string, string> = {
   winner: "Winner",
 };
 
-// Only ever used as a same-origin Link href, but `back` arrives via a query param and
-// could in principle be crafted (e.g. "//evil.com") into a host-changing URL — restrict
-// it to an actual relative path before trusting it.
-function isSafeRelativePath(path: string): boolean {
-  return path.startsWith("/") && !path.startsWith("//") && !path.startsWith("/\\");
-}
-
 export default async function RestaurantDetailPage({
   params,
   searchParams,
@@ -47,7 +41,9 @@ export default async function RestaurantDetailPage({
   const user = await getOptionalUser();
   const { id } = await params;
   const { back } = await searchParams;
-  const backHref = back && isSafeRelativePath(back) ? back : "/";
+  // `back` arrives via a query param and only ever feeds a same-origin <Link href>, but a
+  // crafted value could still turn it into a host-changing URL.
+  const backHref = safeRedirectPath(back);
   const restaurant = await getRestaurantById(id);
   if (!restaurant) notFound();
 
