@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/guards";
+import { getOptionalUser } from "@/lib/auth/guards";
 import { getRestaurantsWithRelations, type RestaurantListItem } from "@/lib/data/restaurants";
 import { getAllNeighborhoods } from "@/lib/data/neighborhoods";
 import { db } from "@/db";
@@ -41,7 +41,7 @@ function matchesSharedFilters(
   r: RestaurantListItem,
   filters: Filters,
   activeNeighborhood: string | undefined,
-  currentUserId: string,
+  currentUserId: string | null,
   cuisineGroupNames: string[],
 ): boolean {
   if (activeNeighborhood && r.neighborhood?.name !== activeNeighborhood) return false;
@@ -58,7 +58,9 @@ function matchesSharedFilters(
   }
   if (filters.highPriority === "1" && !r.isHighPriority) return false;
   if (filters.walkIn === "1" && r.isWalkIn !== true) return false;
-  if (filters.visited === "mine" && !r.visits.some((v) => v.userId === currentUserId)) return false;
+  if (filters.visited === "mine" && (!currentUserId || !r.visits.some((v) => v.userId === currentUserId))) {
+    return false;
+  }
   if (filters.visited === "unvisited" && r.visits.length > 0) return false;
   if (filters.openNow === "1" && !r.locations.some((l) => isOpenNow(l.googleOpeningHours) === true)) {
     return false;
@@ -93,7 +95,7 @@ export default async function HomePage({
 }: {
   searchParams: Promise<Filters>;
 }) {
-  const user = await requireUser();
+  const user = await getOptionalUser();
   const filters = await searchParams;
   const view = filters.view === "map" ? "map" : "list";
 
@@ -144,12 +146,13 @@ export default async function HomePage({
   ];
   const visitedOptions = [
     { value: "", label: "Any visited status" },
-    { value: "mine", label: "Visited by me" },
+    // "Visited by me" needs a "me" — a signed-out visitor gets the rest of the filter.
+    ...(user ? [{ value: "mine", label: "Visited by me" }] : []),
     { value: "unvisited", label: "Not yet visited" },
   ];
 
   const filteredRestaurants = all.filter((r) =>
-    matchesSharedFilters(r, filters, activeNeighborhood, user.id, cuisineGroupNames),
+    matchesSharedFilters(r, filters, activeNeighborhood, user?.id ?? null, cuisineGroupNames),
   );
 
   const activeFilterCount = [
@@ -211,9 +214,15 @@ export default async function HomePage({
         <h1 className="text-2xl font-semibold">
           {filteredRestaurants.length} spot{filteredRestaurants.length === 1 ? "" : "s"}
         </h1>
-        <Link href="/add-entry" className="rounded bg-brand-green px-3 py-2 text-sm text-brand-cream hover:bg-brand-green-dark">
-          + Add spot
-        </Link>
+        {user ? (
+          <Link href="/add-entry" className="rounded bg-brand-green px-3 py-2 text-sm text-brand-cream hover:bg-brand-green-dark">
+            + Add spot
+          </Link>
+        ) : (
+          <Link href="/login" className="rounded bg-brand-green px-3 py-2 text-sm text-brand-cream hover:bg-brand-green-dark">
+            Sign in
+          </Link>
+        )}
       </div>
 
       <FilterForm className="mb-4 flex flex-col gap-3 rounded-lg border bg-brand-green/5 p-4">
@@ -372,7 +381,7 @@ export default async function HomePage({
               {restaurantsWithoutLocation.length} spot
               {restaurantsWithoutLocation.length === 1 ? "" : "s"} not shown on the map (no confirmed
               location yet)
-              {user.isAdmin && (
+              {user?.isAdmin && (
                 <>
                   {" — see "}
                   <Link href="/admin/matches" className="underline">

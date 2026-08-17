@@ -27,18 +27,18 @@ export type CurrentUser = {
   avatarUrl: string | null;
 };
 
-// The real authorization gate. proxy.ts only redirects the browser for UX;
-// every server action / route handler must call this independently, since
-// Drizzle connects to Postgres directly and does not enforce RLS.
-export async function requireUser(): Promise<CurrentUser> {
+/**
+ * Reads the current user without requiring one — returns null for an anonymous visitor.
+ * For read-only pages that are public (browsing spots); anything that writes must use
+ * requireUser/requireAdmin instead, so a signed-out visitor can look but not touch.
+ */
+export async function getOptionalUser(): Promise<CurrentUser | null> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    throw new UnauthorizedError();
-  }
+  if (!user) return null;
 
   const [profile] = await db.select().from(profiles).where(eq(profiles.id, user.id)).limit(1);
 
@@ -55,6 +55,19 @@ export async function requireUser(): Promise<CurrentUser> {
     displayName: profile?.displayName ?? null,
     avatarUrl: profile?.avatarUrl ?? null,
   };
+}
+
+// The real authorization gate. proxy.ts only redirects the browser for UX;
+// every server action / route handler must call this independently, since
+// Drizzle connects to Postgres directly and does not enforce RLS.
+export async function requireUser(): Promise<CurrentUser> {
+  const user = await getOptionalUser();
+
+  if (!user) {
+    throw new UnauthorizedError();
+  }
+
+  return user;
 }
 
 export async function requireAdmin(): Promise<CurrentUser> {

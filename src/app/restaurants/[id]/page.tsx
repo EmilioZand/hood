@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/auth/guards";
+import { getOptionalUser } from "@/lib/auth/guards";
 import { getRestaurantById } from "@/lib/data/restaurants";
 import { averageRating } from "@/lib/data/ratings";
 import {
@@ -44,15 +44,15 @@ export default async function RestaurantDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ back?: string }>;
 }) {
-  const user = await requireUser();
+  const user = await getOptionalUser();
   const { id } = await params;
   const { back } = await searchParams;
   const backHref = back && isSafeRelativePath(back) ? back : "/";
   const restaurant = await getRestaurantById(id);
   if (!restaurant) notFound();
 
-  const iVisited = restaurant.visits.some((v) => v.userId === user.id);
-  const myRating = restaurant.ratings.find((r) => r.userId === user.id)?.rating ?? 0;
+  const iVisited = !!user && restaurant.visits.some((v) => v.userId === user.id);
+  const myRating = (user && restaurant.ratings.find((r) => r.userId === user.id)?.rating) ?? 0;
   const avgRating = averageRating(restaurant.ratings);
 
   async function toggleVisitedAction() {
@@ -126,7 +126,7 @@ export default async function RestaurantDetailPage({
         ) : (
           <div className="flex h-80 flex-col items-center justify-center gap-2 rounded border border-dashed p-6 text-center text-sm text-gray-700 md:sticky md:top-6 md:h-[32rem]">
             <p>No confirmed location yet.</p>
-            {user.isAdmin && (
+            {user?.isAdmin && (
               <Link href="/admin/matches" className="underline">
                 Review matches
               </Link>
@@ -147,7 +147,7 @@ export default async function RestaurantDetailPage({
             <p className="text-sm text-gray-700">{restaurant.locations.length} locations</p>
           )}
         </div>
-        {user.isAdmin && (
+        {user?.isAdmin && (
           <div className="flex gap-2 text-sm">
             <Link href={`/restaurants/${id}/edit`} className="rounded border px-2 py-1">
               Edit
@@ -172,7 +172,7 @@ export default async function RestaurantDetailPage({
         {restaurant.locations.length === 0 ? (
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm text-gray-700">No confirmed location yet.</p>
-            {user.isAdmin && (
+            {user?.isAdmin && (
               <form action={markClosedNoLocationAction}>
                 <button type="submit" className="shrink-0 rounded border px-2 py-1 text-xs text-red-700">
                   Mark closed
@@ -186,7 +186,7 @@ export default async function RestaurantDetailPage({
               <li key={l.id} className="rounded border px-3 py-2 text-sm">
                 <div className="flex items-start justify-between gap-2">
                   {l.address && <p className="text-gray-700">{l.address}</p>}
-                  {user.isAdmin && (
+                  {user?.isAdmin && (
                     <form action={toggleClosedAction.bind(null, l.id, l.status !== "permanently_closed")}>
                       <button
                         type="submit"
@@ -270,18 +270,20 @@ export default async function RestaurantDetailPage({
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <form action={toggleVisitedAction}>
-          <button
-            type="submit"
-            className={`rounded px-3 py-2 text-sm ${
-              iVisited ? "bg-green-100 text-green-800" : "border"
-            }`}
-          >
-            {iVisited ? "✓ Visited by you" : "Mark as visited"}
-          </button>
-        </form>
+        {user && (
+          <form action={toggleVisitedAction}>
+            <button
+              type="submit"
+              className={`rounded px-3 py-2 text-sm ${
+                iVisited ? "bg-green-100 text-green-800" : "border"
+              }`}
+            >
+              {iVisited ? "✓ Visited by you" : "Mark as visited"}
+            </button>
+          </form>
+        )}
 
-        {user.isAdmin && (
+        {user?.isAdmin && (
           <form action={toggleHighPriorityAction}>
             <button
               type="submit"
@@ -296,20 +298,24 @@ export default async function RestaurantDetailPage({
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <span className="text-sm text-gray-600">Your rating:</span>
-        <div className="flex">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <form key={n} action={rateAction.bind(null, n)}>
-              <button
-                type="submit"
-                aria-label={`Rate ${n} star${n === 1 ? "" : "s"}`}
-                className={`px-0.5 text-xl leading-none ${n <= myRating ? "text-brand-gold-dark" : "text-gray-300"}`}
-              >
-                ★
-              </button>
-            </form>
-          ))}
-        </div>
+        {user && (
+          <>
+            <span className="text-sm text-gray-600">Your rating:</span>
+            <div className="flex">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <form key={n} action={rateAction.bind(null, n)}>
+                  <button
+                    type="submit"
+                    aria-label={`Rate ${n} star${n === 1 ? "" : "s"}`}
+                    className={`px-0.5 text-xl leading-none ${n <= myRating ? "text-brand-gold-dark" : "text-gray-300"}`}
+                  >
+                    ★
+                  </button>
+                </form>
+              ))}
+            </div>
+          </>
+        )}
         {avgRating !== null && <AverageRating average={avgRating} count={restaurant.ratings.length} />}
       </div>
 
@@ -333,17 +339,26 @@ export default async function RestaurantDetailPage({
 
       <section>
         <h2 className="mb-2 text-lg font-semibold">Notes</h2>
-        <form action={addNoteAction} className="mb-4 flex gap-2">
-          <input
-            name="body"
-            placeholder="Add a note..."
-            required
-            className="flex-1 rounded border px-3 py-2 text-sm"
-          />
-          <button type="submit" className="rounded bg-brand-green px-3 py-2 text-sm text-brand-cream hover:bg-brand-green-dark">
-            Post
-          </button>
-        </form>
+        {user ? (
+          <form action={addNoteAction} className="mb-4 flex gap-2">
+            <input
+              name="body"
+              placeholder="Add a note..."
+              required
+              className="flex-1 rounded border px-3 py-2 text-sm"
+            />
+            <button type="submit" className="rounded bg-brand-green px-3 py-2 text-sm text-brand-cream hover:bg-brand-green-dark">
+              Post
+            </button>
+          </form>
+        ) : (
+          <p className="mb-4 text-sm text-gray-700">
+            <Link href={`/login?redirectTo=/restaurants/${id}`} className="underline">
+              Sign in
+            </Link>{" "}
+            to add a note, rate this spot, or mark it visited.
+          </p>
+        )}
         <ul className="flex flex-col gap-3">
           {restaurant.notes
             .filter((n) => !n.deletedAt)
